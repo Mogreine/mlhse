@@ -33,7 +33,7 @@ class KDTree:
         ind = np.array([*range(X.shape[0])]).reshape((-1, 1))
         X = np.hstack([X, ind])
 
-        self.root = self.build(X, leaf_size)
+        self.root = self.build(X, leaf_size=leaf_size)
 
     def build(self, X: np.array, split_feature=0, leaf_size: int = 40):
         if X.shape[0] <= leaf_size:
@@ -94,7 +94,7 @@ class KDTree:
 
     def query_one(self, x: np.array, k=1):
         res = self._query_one(x, node=self.root, k=k)
-        return res[:, -1]
+        return res[:, -2]
 
     def _query_one(self, x: np.array, node, k=1):
         if node.node_type == 'leaf':
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     cance_X, cancer_y = read_cancer_dataset('data/cancer.csv')
     spam_X, spam_y = read_spam_dataset('data/spam.csv')
 
-    kd_tree = KDTree(cance_X, leaf_size=10)
+    kd_tree = KDTree(cance_X, leaf_size=5)
 
 
     print('Done!')
