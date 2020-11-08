@@ -94,7 +94,7 @@ class KDTree:
 
     def query_one(self, x: np.array, k=1):
         res = self._query_one(x, node=self.root, k=k)
-        return res[:, -2]
+        return res[:, -1]
 
     def _query_one(self, x: np.array, node, k=1):
         if node.node_type == 'leaf':
@@ -111,7 +111,7 @@ class KDTree:
         if KDTree.dist(furthest_point, x) > abs(node.split_param_val - x[node.split_param_name]):
             arr2 = self._query_one(x, node_order[1], k)
             arr = np.vstack([arr1, arr2])
-            arr = arr[arr[:, -1].argsort()]
+            arr = arr[arr[:, -2].argsort()]
             return arr[:k]
         else:
             return arr1
