@@ -80,6 +80,7 @@ class KDTree:
         ind = X[:, -1].reshape((-1, 1))
         X = np.delete(X, obj=X.shape[1] - 1, axis=1)
 
+        # a fast way to calc dist to all points
         dist_to_all_points = np.sum((X.T - y.reshape(-1, 1)) ** 2, axis=0) ** (1 / 2)
         dist_to_all_points = dist_to_all_points.reshape((-1, 1))
 
