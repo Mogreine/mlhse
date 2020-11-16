@@ -6,6 +6,7 @@ import copy
 import pandas as pd
 from collections import namedtuple
 from typing import NoReturn, Tuple, List
+import time
 
 
 class KDTree:
@@ -26,7 +27,6 @@ class KDTree:
         -------
 
         """
-        self.split_feature = 0
 
         self.leaf = namedtuple('leaf', ('node_type', 'points'))
         self.node = namedtuple('node', ('node_type', 'split_param_name', 'split_param_val', 'lnode', 'rnode'))
@@ -39,11 +39,34 @@ class KDTree:
         if X.shape[0] <= leaf_size:
             return self.leaf('leaf', X.copy())
 
-        split_feature %= X.shape[1] - 1
+        good_split = False
+        for i in range(X.shape[1] - 1):
+            split_feature %= X.shape[1] - 1
 
-        arr = X[:, self.split_feature]
-        median = np.median(arr)
-        median_mask = X[:, self.split_feature] <= median
+            arr = X[:, split_feature]
+            median = np.median(arr)
+            median_mask = X[:, split_feature] <= median
+
+            # Если убрали хотя бы 10%, то ок
+            if len(np.nonzero(median_mask)[0]) / X.shape[0] < 0.9:
+                good_split = True
+                break
+            split_feature += 1
+
+        if not good_split:
+            return self.leaf('leaf', X.copy())
+
+        # split_feature %= X.shape[1] - 1
+        #
+        # arr = X[:, split_feature]
+        # median = np.median(arr)
+        # median_mask = X[:, split_feature] <= median
+
+        # # Если не можем разделить нормально, то лист
+        # if X.shape[0] - len(np.nonzero(median_mask)[0]) <= leaf_size:
+        #     return self.leaf('leaf', X.copy())
+
+        split_feature += 1
 
         xl = X[median_mask]
         xr = X[~median_mask]
@@ -51,7 +74,7 @@ class KDTree:
         lnode = self.build(xl, split_feature + 1, leaf_size)
         rnode = self.build(xr, split_feature + 1, leaf_size)
 
-        return self.node('node', self.split_feature, median, lnode, rnode)
+        return self.node('node', split_feature, median, lnode, rnode)
 
     def query(self, X: np.array, k: int = 1) -> List[List]:
         """
@@ -77,6 +100,7 @@ class KDTree:
         return res
 
     def sort_by_dist(self, X, y):
+        self.comparisons += X.shape[0]
         ind = X[:, -1].reshape((-1, 1))
         X = np.delete(X, obj=X.shape[1] - 1, axis=1)
 
@@ -94,7 +118,9 @@ class KDTree:
         return np.linalg.norm(x - y)
 
     def query_one(self, x: np.array, k=1):
+        self.comparisons = 0
         res = self._query_one(x, node=self.root, k=k)
+        print(f'Comparisons: {self.comparisons}')
         return res[:, -1]
 
     def _query_one(self, x: np.array, node, k=1):
@@ -109,7 +135,7 @@ class KDTree:
         # Мы не хотим брать индекс и расстояние до x у точки
         furthest_point = arr1[-1, :-2]
 
-        if KDTree.dist(furthest_point, x) > abs(node.split_param_val - x[node.split_param_name]):
+        if KDTree.dist(furthest_point, x) > abs(node.split_param_val - x[node.split_param_name]) or arr1.shape[0] < k:
             arr2 = self._query_one(x, node_order[1], k)
             arr = np.vstack([arr1, arr2])
             arr = arr[arr[:, -2].argsort()]
@@ -141,13 +167,22 @@ def read_cancer_dataset(path_to_csv: str) -> Tuple[np.array, np.array]:
 
     y = data['label']
     data.drop(['label'], axis=1, inplace=True)
+    data_scaled = scale_std(data.to_numpy())
 
     y = y.map({
         'M': 1,
         'B': 0
     })
 
-    return data.to_numpy(), y.to_numpy()
+    return data_scaled, y.to_numpy()
+
+
+def scale_std(X):
+    X_prep = X.copy()
+    col_mean = np.mean(X_prep, axis=0)
+    col_std = np.std(X_prep, axis=0)
+    X_prep = (X_prep - col_mean) / col_std
+    return X_prep
 
 
 def read_spam_dataset(path_to_csv: str) -> Tuple[np.array, np.array]:
@@ -173,8 +208,9 @@ def read_spam_dataset(path_to_csv: str) -> Tuple[np.array, np.array]:
 
     y = data['label']
     data.drop(['label'], axis=1, inplace=True)
+    data_scaled = scale_std(data.to_numpy())
 
-    return data.to_numpy(), y.to_numpy()
+    return data_scaled, y.to_numpy()
 
 
 def train_test_split(X: np.array, y: np.array, ratio: float) -> Tuple[np.array, np.array, np.array, np.array]:
@@ -249,6 +285,88 @@ def get_precision_recall_accuracy(y_pred: np.array, y_true: np.array) -> Tuple[n
         recall_arr.append(tp / (tp + fn))
 
     return np.array(precision_arr), np.array(recall_arr), accuracy
+
+
+class KNearest:
+    def __init__(self, n_neighbors: int = 5, leaf_size: int = 30):
+        """
+
+        Parameters
+        ----------
+        n_neighbors : int
+            Число соседей, по которым предсказывается класс.
+        leaf_size : int
+            Минимальный размер листа в KD-дереве.
+
+        """
+        self.n_neighbors = n_neighbors
+        self.leaf_size = leaf_size
+
+    def fit(self, X: np.array, y: np.array) -> NoReturn:
+        """
+
+        Parameters
+        ----------
+        X : np.array
+            Набор точек, по которым строится классификатор.
+        y : np.array
+            Метки точек, по которым строится классификатор.
+
+        """
+        self.y = y.copy()
+        start = time.time()
+        self.kd_tree = KDTree(X, leaf_size=self.leaf_size)
+        print(f'Building time: {time.time() - start}')
+
+    def predict_proba(self, X: np.array) -> List[np.array]:
+        """
+
+        Parameters
+        ----------
+        X : np.array
+            Набор точек, для которых нужно определить класс.
+
+        Returns
+        -------
+        list[np.array]
+            Список np.array (длина каждого np.array равна числу классов):
+            вероятности классов для каждой точки X.
+
+
+        """
+        inds = self.kd_tree.query(X, self.n_neighbors)
+        res = []
+        y_max = np.max(self.y)
+        for ind_arr in inds:
+            cls = self.y[ind_arr.astype(int)]
+            freq = np.bincount(cls)
+            if len(freq) - 1 != y_max:
+                prob = np.concatenate([freq, ([0] * (y_max - len(freq) + 1))])
+            else:
+                prob = freq
+            prob = prob / np.sum(freq)
+            res.append(prob)
+        return res
+
+    def predict(self, X: np.array) -> np.array:
+        """
+
+        Parameters
+        ----------
+        X : np.array
+            Набор точек, для которых нужно определить класс.
+
+        Returns
+        -------
+        np.array
+            Вектор предсказанных классов.
+
+
+        """
+        start = time.time()
+        res = np.argmax(self.predict_proba(X), axis=1)
+        print(f'Query time: {time.time() - start}, k: {self.n_neighbors}, points: {X.shape[0]}')
+        return res
 
 
 if __name__ == '__main__':
