@@ -10,12 +10,12 @@ def true_closest(X_train, X_test, k):
         result.append(bests[:min(k, len(bests))])
     return result
 
-
-X_train = np.random.randn(100, 3)
-X_test = np.random.randn(10, 3)
-tree = KDTree(X_train, leaf_size=2)
-predicted = tree.query(X_test, k=4)
-true = true_closest(X_train, X_test, k=4)
+k = 10
+X_train = np.random.randn(10000, 30)
+X_test = np.random.randn(100, 30)
+tree = KDTree(X_train, leaf_size=40)
+predicted = tree.query(X_test, k=k)
+true = true_closest(X_train, X_test, k=k)
 
 if np.sum(np.abs(np.array(np.array(predicted).shape) - np.array(np.array(true).shape))) != 0:
     print("Wrong shape")
