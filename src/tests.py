@@ -15,9 +15,10 @@ def test_kd():
         return result
 
     k = 10
-    X_train = np.random.randn(10000, 30)
-    X_test = np.random.randn(10, 30)
-    tree = KDTree(X_train, leaf_size=40)
+    X_train = np.random.randn(10000, 3)
+    # X_test = np.random.randn(10, 30)
+    X_test = np.ones((1, 3)) * 4
+    tree = KDTree(X_train, leaf_size=10)
     predicted = tree.query(X_test, k=k)
     true = true_closest(X_train, X_test, k=k)
 
@@ -112,6 +113,6 @@ def test_spam():
 
 
 if __name__ == "__main__":
-    #test_spam()
+    test_spam()
     #test_sub()
     test_kd()
