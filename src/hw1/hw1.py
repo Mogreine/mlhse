@@ -10,7 +10,6 @@ import time
 
 
 class KDTree:
-
     def __init__(self, X: np.array, leaf_size: int = 40):
         """
 
@@ -36,22 +35,16 @@ class KDTree:
         self.root = self.build(X, leaf_size=leaf_size)
 
     def build(self, X: np.array, split_feature=0, leaf_size: int = 40):
-        split_feature %= X.shape[1] - 1
-
-        arr = X[:, split_feature]
-        median = np.median(arr)
-        median_mask = X[:, split_feature] < median
-
         good_split = False
         for i in range(X.shape[1] - 1):
             split_feature %= X.shape[1] - 1
 
             arr = X[:, split_feature]
             median = np.median(arr)
-            median_mask = X[:, split_feature] <= median
+            median_mask = X[:, split_feature] < median
 
             # Если убрали хотя бы 5%, то ок
-            if len(np.nonzero(median_mask)[0]) / X.shape[0] < 0.05:
+            if len(np.nonzero(median_mask)[0]) / X.shape[0] > 0.05:
                 good_split = True
                 break
             split_feature += 1
@@ -94,6 +87,20 @@ class KDTree:
             res.append(res_x)
         return res
 
+    @staticmethod
+    def merge(arr1, arr2, feature, k):
+        res = []
+        l, r = 0, 0
+        for i in range(k):
+            if arr1[l][feature] < arr2[r][feature]:
+                elem = arr1[l]
+                l += 1
+            else:
+                elem = arr2[r]
+                r += 1
+            res.append(elem)
+        return np.array(res)
+
     def sort_by_dist(self, X, y):
         self.comparisons += X.shape[0]
         ind = X[:, -1].reshape((-1, 1))
@@ -128,9 +135,10 @@ class KDTree:
 
         if r > abs(node.split_param_val - x[node.split_param_name]) or arr1.shape[0] < k:
             arr2 = self._query_one(x, node_order[1], k)
-            arr = np.vstack([arr1, arr2])
-            arr = arr[arr[:, -2].argsort()]
-            return arr[:k]
+            # arr = np.vstack([arr1, arr2])
+            # arr = arr[arr[:, -2].argsort()]
+            # return arr[:k]
+            return KDTree.merge(arr1, arr2, -2, k)
         else:
             return arr1
 
