@@ -42,7 +42,24 @@ class KDTree:
         median = np.median(arr)
         median_mask = X[:, split_feature] < median
 
-        # Если не можем разделить нормально, то лист
+        good_split = False
+        for i in range(X.shape[1] - 1):
+            split_feature %= X.shape[1] - 1
+
+            arr = X[:, split_feature]
+            median = np.median(arr)
+            median_mask = X[:, split_feature] <= median
+
+            # Если убрали хотя бы 5%, то ок
+            if len(np.nonzero(median_mask)[0]) / X.shape[0] < 0.05:
+                good_split = True
+                break
+            split_feature += 1
+
+        if not good_split:
+            return self.leaf('leaf', X.copy())
+
+        # Если не можем разделить, чтобы размер был хотя бы leaf_size, то лист
         if len(np.nonzero(median_mask)[0]) <= leaf_size:
             return self.leaf('leaf', X.copy())
 
