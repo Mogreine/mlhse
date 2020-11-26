@@ -102,7 +102,7 @@ def test_sub():
 
 
 def test_spam():
-    X, y = read_spam_dataset('hw1/data/spam.csv')
+    X, y = read_spam_dataset('data/spam.csv')
     X_train, y_train, X_test, y_test = train_test_split(X, y, 0.9)
     start = time.time()
 
