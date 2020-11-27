@@ -8,7 +8,7 @@ import copy
 import cv2
 from collections import deque
 from typing import NoReturn
-from src.hw2.hw2 import DBScan, KMeans, AgglomertiveClustering
+from src.hw2.hw2 import DBScan, KMeans, AgglomertiveClustering, read_image, save_image, show_image
 
 
 def visualize_clasters(X, labels):
@@ -34,16 +34,31 @@ def clusters_statistics(flatten_image, cluster_colors, cluster_labels):
     plt.show()
 
 
-X_1, true_labels = make_blobs(400, 2, centers=[[0, 0], [-4, 0], [3.5, 3.5], [3.5, -2.0]])
-# visualize_clasters(X_1, true_labels)
-X_2, true_labels = make_moons(400, noise=0.075)
-# visualize_clasters(X_2, true_labels)
+# X_1, true_labels = make_blobs(400, 2, centers=[[0, 0], [-4, 0], [3.5, 3.5], [3.5, -2.0]])
+# # visualize_clasters(X_1, true_labels)
+# X_2, true_labels = make_moons(400, noise=0.075)
+# # visualize_clasters(X_2, true_labels)
 
 
-agg_clustering = AgglomertiveClustering(n_clusters=4, linkage='complete')
-labels = agg_clustering.fit_predict(X_1)
-visualize_clasters(X_1, labels)
+def clusterize_image(image, n_clusters=10):
+    km = KMeans(n_clusters=n_clusters, init='k-means++')
+    img_flat = image.reshape(-1, image.shape[-1])
+    km.fit(img_flat)
+    clusters = km.predict(img_flat)
 
-agg_clustering = AgglomertiveClustering(n_clusters=2, linkage='single')
-labels = agg_clustering.fit_predict(X_2)
-visualize_clasters(X_2, labels)
+    recolored = img_flat
+    cluster_colors = []
+    for i in range(n_clusters):
+        col = np.mean(img_flat[clusters == i], axis=0)
+        recolored[clusters == i] = col
+        cluster_colors.append(col)
+    recolored = recolored.reshape(image.shape)
+    # clusters_statistics(image.reshape(-1, 3) / 255, np.array(cluster_colors) / 255, clusters)  # Very slow (:
+    return recolored
+
+
+img = read_image('img2.jpg')
+show_image(img)
+img_clustered = clusterize_image(img, n_clusters=40)
+show_image(img_clustered)
+

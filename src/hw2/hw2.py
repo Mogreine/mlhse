@@ -84,6 +84,11 @@ class KMeans:
         for _ in range(self.max_iter):
             y = np.argmin(self._calc_dist(X, centroids), axis=0)
             centroids = np.array([np.mean(X[y == cluster], axis=0) for cluster in range(self.n_clusters)])
+
+            empty_centroids = np.ma.masked_invalid(centroids[:, 0]).mask
+            empty_centroids_count = np.count_nonzero(empty_centroids)
+
+            centroids[empty_centroids] = self._init_centroids(empty_centroids_count, X)[:empty_centroids_count]
         self.centroids = centroids
 
     def predict(self, X: np.array) -> np.array:
@@ -241,8 +246,8 @@ class AgglomertiveClustering:
         for i in range(len(y)):
             metric_matrix[i, i] = 1e9
 
-        while i != self.n_clusters:
-            clusters = np.unique(y)
+        clusters = np.unique(y)
+        while len(clusters) > self.n_clusters:
             cl1, cl2 = np.unravel_index(np.argmin(metric_matrix, axis=None), metric_matrix.shape)
             for cl in clusters:
                 if cl == cl1:
@@ -254,10 +259,63 @@ class AgglomertiveClustering:
             metric_matrix[cl2] = 1e9
             metric_matrix[:, cl2] = 1e9
 
+            clusters = np.unique(y)
             i -= 1
 
-        clusters = np.sort(np.unique(y))
         for i in range(len(clusters)):
             y[y == clusters[i]] = i
 
         return y
+
+
+def read_image(path: str) -> np.array:
+    """
+    Читает изображение.
+
+    Parameters
+    ----------
+    path : str
+        Путь к изображению.
+
+    Return
+    ------
+    image : np.array
+        Трехмерный массив размера (N, M, C),
+        где N и M - размеры изображения,
+        а C - количество цветов (3 для обычного изображения).
+    """
+    mat = cv2.imread(path)
+    mat = cv2.cvtColor(mat, cv2.COLOR_BGR2RGB)
+    return np.asarray(mat[:, :])
+
+
+def show_image(image: np.array) -> NoReturn:
+    """
+    Выводит изображение
+
+    Parameters
+    ----------
+    image : np.array
+        Трехмерный массив - нормализованное изображение в цветовой схеме RGB.
+    """
+    plt.figure(figsize=np.array(image.shape[:-1]) / 50)
+    plt.imshow(image)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+
+def save_image(image: np.array, path: str) -> NoReturn:
+    """
+    Сохраняет изображение.
+
+    Parameters
+    ----------
+    image : np.array
+        Трехмерный массив - нормализованное изображение в цветовой схеме RGB.
+    path : str
+        Путь для сохранения.
+    """
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(path, image)
+
