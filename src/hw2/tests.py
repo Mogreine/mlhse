@@ -34,16 +34,16 @@ def clusters_statistics(flatten_image, cluster_colors, cluster_labels):
     plt.show()
 
 
-X_1, true_labels = make_blobs(200, 2, centers=[[0, 0], [-4, 0], [3.5, 3.5], [3.5, -2.0]])
+X_1, true_labels = make_blobs(400, 2, centers=[[0, 0], [-4, 0], [3.5, 3.5], [3.5, -2.0]])
 # visualize_clasters(X_1, true_labels)
-X_2, true_labels = make_moons(200, noise=0.075)
+X_2, true_labels = make_moons(400, noise=0.075)
 # visualize_clasters(X_2, true_labels)
 
 
-agg_clustering = AgglomertiveClustering(n_clusters=4)
+agg_clustering = AgglomertiveClustering(n_clusters=4, linkage='complete')
 labels = agg_clustering.fit_predict(X_1)
 visualize_clasters(X_1, labels)
 
-agg_clustering = AgglomertiveClustering(n_clusters=2)
+agg_clustering = AgglomertiveClustering(n_clusters=2, linkage='single')
 labels = agg_clustering.fit_predict(X_2)
 visualize_clasters(X_2, labels)

@@ -206,9 +206,9 @@ class AgglomertiveClustering:
         self.linkage = linkage
         self.n_clusters = n_clusters
         dd = {
-            'average': np.mean,
-            'single': np.amin,
-            'complete': np.amax
+            'average': lambda a, b: (a + b) / 2,
+            'single': min,
+            'complete': max
         }
         self.metric = dd[linkage]
 
@@ -236,27 +236,24 @@ class AgglomertiveClustering:
         """
         y = np.arange(X.shape[0])
         i = len(y)
+        metric_matrix = self._calc_dist(X, X)
+
+        for i in range(len(y)):
+            metric_matrix[i, i] = 1e9
+
         while i != self.n_clusters:
             clusters = np.unique(y)
+            cl1, cl2 = np.unravel_index(np.argmin(metric_matrix, axis=None), metric_matrix.shape)
+            for cl in clusters:
+                if cl == cl1:
+                    continue
+                metric_matrix[cl1, cl] = self.metric(metric_matrix[cl1, cl], metric_matrix[cl2, cl])
+                metric_matrix[cl, cl1] = metric_matrix[cl1, cl]
 
-            arr = {}
-            for cl1 in clusters:
-                for cl2 in clusters:
-                    if cl1 == cl2 or (cl1, cl2) in arr:
-                        continue
-                    a = X[y == cl1]
-                    b = X[y == cl2]
-                    dists = self._calc_dist(a, b)
-                    arr[(cl1, cl2)] = self.metric(dists)
+            y[y == cl2] = cl1
+            metric_matrix[cl2] = 1e9
+            metric_matrix[:, cl2] = 1e9
 
-            val = 1e9
-            cl1_fin, cl2_fin = -1, -1
-            for (cl1, cl2), metr in arr.items():
-                if metr < val:
-                    val = metr
-                    cl1_fin, cl2_fin = cl1, cl2
-
-            y[y == cl2_fin] = cl1_fin
             i -= 1
 
         clusters = np.sort(np.unique(y))
