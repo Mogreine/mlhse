@@ -222,7 +222,7 @@ class AgglomertiveClustering:
 
     def fit_predict(self, X: np.array, y=None) -> np.array:
         """
-        Кластеризует элементы из X,
+        Кластеризует элементы из X, 
         для каждого возвращает индекс соотв. кластера.
         Parameters
         ----------
