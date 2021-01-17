@@ -123,7 +123,7 @@ class ReLU(Module):
         """
         self.X = X.copy()
         self.X[self.X < 0] = 0
-        return self.X
+        return self.X.copy()
 
     def backward(self, grad) -> np.ndarray:
         """
@@ -173,9 +173,9 @@ class Softmax(Module):
             return res
 
         def softmax_stable(X):
-            shiftx = X - np.max(X)
+            shiftx = X - np.max(X, axis=1).reshape(-1, 1)
             exps = np.exp(shiftx)
-            return exps / np.sum(exps)
+            return exps / (np.sum(exps) + 1e-16)
 
         res = softmax_stable(X)
         self.S = res.copy()
@@ -195,8 +195,7 @@ class Softmax(Module):
         np.ndarray
             Новое значение градиента.
         """
-        self.grad = Y - self.S
-        return self.grad
+        return self.S - Y
 
 
 class MLPClassifier:
@@ -237,20 +236,19 @@ class MLPClassifier:
         features = X.shape[1]
         batches = samples // batch_size + (samples % batch_size != 0)
 
-        # y = y.reshape(-1, 1)
         classes = np.amax(y) + 1
         Y = np.zeros(shape=(samples, classes))
         Y[np.arange(samples), y] = 1
 
         for epoch in range(self.epochs):
             for batch_number in range(batches):
-                input = X[batch_number:batch_number + batch_size]
+                input = X[batch_number:batch_number + batch_size].copy()
+                grad = Y[batch_number:batch_number + batch_size].copy()
 
                 # forward cycle
                 for layer in self.modules:
                     input = layer.forward(input)
 
-                grad = Y[batch_number:batch_number + batch_size]
                 self.modules.reverse()
                 # backward cycle
                 for layer in self.modules:
