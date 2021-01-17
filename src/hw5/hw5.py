@@ -40,7 +40,7 @@ class Linear(Module):
         self.in_features = in_features
         self.out_features = out_features
         self.W = np.random.randn(in_features, out_features)
-        self.b = None
+        self.b = np.random.randn(out_features)
         self.dW = np.ndarray
         self.db = np.ndarray
         self.X = np.ndarray
@@ -64,10 +64,8 @@ class Linear(Module):
             либо матрица размерности (batch_size, out_features)
 
         """
-        if self.b is None:
-            self.b = np.random.randn(X.shape)
         self.X = X.copy()
-        return X @ self.W @ + self.b
+        return X @ self.W + self.b
 
     def backward(self, grad: np.ndarray) -> np.ndarray:
         """
@@ -83,7 +81,7 @@ class Linear(Module):
             Новое значение градиента.
         """
         self.dW = self.X.T @ grad
-        self.db = grad.copy()
+        self.db = np.sum(grad, axis=0)
         dX = grad @ self.W.T
         return dX
 
@@ -96,8 +94,8 @@ class Linear(Module):
         alpha : float
             Скорость обучения.
         """
-        self.W -= self.dW
-        self.b -= self.db
+        self.W -= alpha * self.dW
+        self.b -= alpha * self.db
 
 
 class ReLU(Module):
@@ -168,10 +166,20 @@ class Softmax(Module):
             Выход после слоя (той же размерности, что и вход).
 
         """
-        res = np.exp(X)
-        sums = np.sum(res, axis=1)
-        res /= sums
+        def softmax_naive(X):
+            res = np.exp(X)
+            sums = np.sum(res, axis=1) + 1e-16
+            res /= sums
+            return res
+
+        def softmax_stable(X):
+            shiftx = X - np.max(X)
+            exps = np.exp(shiftx)
+            return exps / np.sum(exps)
+
+        res = softmax_stable(X)
         self.S = res.copy()
+
         return res
 
     def backward(self, Y) -> np.ndarray:
@@ -229,13 +237,8 @@ class MLPClassifier:
         features = X.shape[1]
         batches = samples // batch_size + (samples % batch_size != 0)
 
-        missing = samples % batch_size
-        if missing != 0:
-            zeros_add = np.zeros(shape=(missing, features))
-            X = np.vstack([X, zeros_add])
-
         # y = y.reshape(-1, 1)
-        classes = np.amax(y)
+        classes = np.amax(y) + 1
         Y = np.zeros(shape=(samples, classes))
         Y[np.arange(samples), y] = 1
 
@@ -248,15 +251,15 @@ class MLPClassifier:
                     input = layer.forward(input)
 
                 grad = Y[batch_number:batch_number + batch_size]
-                self.modules = reversed(self.modules)
+                self.modules.reverse()
                 # backward cycle
                 for layer in self.modules:
                      grad = layer.backward(grad)
-                self.modules = reversed(self.modules)
+                self.modules.reverse()
 
                 # update cycle
                 for layer in self.modules:
-                    layer.update()
+                    layer.update(self.alpha)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -274,7 +277,11 @@ class MLPClassifier:
             Размерность (X.shape[0], n_classes)
 
         """
-        pass
+        input = X.copy()
+        # forward cycle
+        for layer in self.modules:
+            input = layer.forward(input)
+        return input
 
     def predict(self, X) -> np.ndarray:
         """
