@@ -87,7 +87,7 @@ def train_gan():
     gen_optim = Adam(generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
     disc_optim = Adam(discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
 
-    dataset = CatDataset(size=128)
+    dataset = CatDataset(path_to_dataset='data', size=128)
 
     for ep in range(epochs):
         dataloader = DataLoader(dataset, shuffle=True, batch_size=batch_size)
