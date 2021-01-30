@@ -10,7 +10,7 @@ import random
 import numpy as np
 from tqdm.notebook import tqdm
 
-from src.hw6.hw6 import Generator, Discriminator
+from src.hw6.hw6 import Generator, Discriminator, VAE
 
 
 def random_noise(batch_size, channels, side_size):
@@ -34,7 +34,7 @@ def visualise(imgs, rows=2):
 
 
 class CatDataset(Dataset):
-    def __init__(self, path_to_dataset="cat_136", size=64):
+    def __init__(self, path_to_dataset="data", size=64):
         self.photo_names = os.listdir(path_to_dataset)
         self.path_base = path_to_dataset
         self.size = size
@@ -134,5 +134,61 @@ def train_gan():
             f"Epoch {ep + 1} | Discriminator loss: {disc_loss_avg / total_batches} | Generator loss: {gen_loss_avg / total_batches}")
 
 
+def train_vae():
+    vae = VAE()
+    vae.cuda()
+
+    epochs = 201
+    batch_size = 8
+    vae_optim = Adam(vae.parameters(), lr=1e-4)
+
+    dataset = CatDataset(size=128)
+
+    test_imgs_1 = torch.cat([dataset[i].unsqueeze(0) for i in (0, 34, 76, 1509)])
+    test_imgs_2 = torch.cat([dataset[i].unsqueeze(0) for i in (734, 123, 512, 3634)])
+
+    for ep in range(epochs):
+        dataloader = DataLoader(dataset, shuffle=True, batch_size=batch_size)
+        total_batches = 0
+        rec_loss_avg = 0
+        kld_loss_avg = 0
+
+        for i, batch in tqdm(enumerate(dataloader), total=(len(dataset) + batch_size) // batch_size):
+            if len(batch) < batch_size:
+                continue
+            total_batches += 1
+            x = batch.cuda()
+            x_rec, kld = vae(x)
+            img_elems = float(np.prod(list(batch.size())))
+            kld_loss = kld.sum() / batch_size
+            rec_loss = ((x_rec - x)**2).sum() / batch_size
+            loss = rec_loss + 0.1 * kld_loss # https://openreview.net/forum?id=Sy2fzU9gl
+            vae_optim.zero_grad()
+            loss.backward()
+            vae_optim.step()
+            kld_loss_avg += kld_loss.item()
+            rec_loss_avg += rec_loss.item()
+
+        if ep % 10 == 0:
+            with torch.no_grad():
+                z_1 = vae.encode(test_imgs_1.cuda())
+                z_2 = vae.encode(test_imgs_2.cuda())
+                x_int = []
+                for i in range(9):
+                    z = (i * z_1 + (8 - i) * z_2) / 8
+                    z_dec = vae.decode(z)
+                    x_int.append(z_dec)
+                x_int = torch.cat(x_int)
+                visualise(x_int, rows=len(test_imgs_1))
+                z_rand = torch.randn_like(z_1)
+                x_int = vae.decode(z_rand)
+                visualise(x_int, rows=len(test_imgs_1)//2)
+
+
+        print(f"Epoch {ep+1} | Reconstruction loss: {rec_loss_avg / total_batches} | KLD loss: {kld_loss_avg / total_batches}")
+
+
 if __name__ == "__main__":
-    train_gan()
+    # train_gan()
+    train_vae()
+
