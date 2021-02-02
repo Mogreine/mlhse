@@ -99,3 +99,80 @@ class LinearSVM:
 
         """
         return np.sign(self.decision_function(X))
+
+
+def get_polynomial_kernel(c=1, power=2):
+    """Возвращает полиномиальное ядро с заданной константой и степенью"""
+    return lambda u, v: (c + u @ v) ** power
+
+
+def get_gaussian_kernel(sigma=1.):
+    """Возвращает ядро Гаусса с заданным коэффицинтом сигма"""
+    return lambda u, v: np.exp(-sigma * (u - v) @ (u - v))
+
+
+class KernelSVM:
+    def __init__(self, C: float, kernel: Callable = lambda u, v: u @ v):
+        """
+
+        Parameters
+        ----------
+        C : float
+            Soft margin coefficient.
+        kernel : Callable
+            Функция ядра.
+
+        """
+        self.C = C
+        self.kernel = kernel
+        self.support = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
+        """
+        Обучает SVM, решая задачу оптимизации при помощи cvxopt.solvers.qp
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Данные для обучения SVM.
+        y : np.ndarray
+            Бинарные метки классов для элементов X
+            (можно считать, что равны -1 или 1).
+
+        """
+        pass
+
+    def decision_function(self, X: np.ndarray) -> np.ndarray:
+        """
+        Возвращает значение решающей функции.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Данные, для которых нужно посчитать значение решающей функции.
+
+        Return
+        ------
+        np.ndarray
+            Значение решающей функции для каждого элемента X
+            (т.е. то число, от которого берем знак с целью узнать класс).
+
+        """
+        pass
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Классифицирует элементы X.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Данные, которые нужно классифицировать
+
+        Return
+        ------
+        np.ndarray
+            Метка класса для каждого элемента X.
+
+        """
+        return np.sign(self.decision_function(X))
