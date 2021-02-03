@@ -108,7 +108,15 @@ def get_polynomial_kernel(c=1, power=2):
 
 def get_gaussian_kernel(sigma=1.):
     """Возвращает ядро Гаусса с заданным коэффицинтом сигма"""
-    return lambda u, v: np.exp(-sigma * (u - v) @ (u - v))
+    def func(X, v):
+        if len(X.shape) == 1:
+            return np.exp(-sigma * (X - v) @ (X - v))
+        X = X.copy()
+        X -= v
+        X = np.linalg.norm(X, axis=1) ** 2
+        return np.exp(-sigma * X)
+
+    return func
 
 
 class KernelSVM:
@@ -125,7 +133,8 @@ class KernelSVM:
         """
         self.C = C
         self.kernel = kernel
-        self.support = None
+        self.support = []
+        self.a = np.ndarray
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
@@ -140,7 +149,37 @@ class KernelSVM:
             (можно считать, что равны -1 или 1).
 
         """
-        pass
+        n, m = X.shape
+        kerP = np.array([[self.kernel(X[i], X[j]) for j in range(n)] for i in range(n)])
+        P = np.outer(y, y) * kerP
+        q = -np.ones(n).reshape(-1, 1)
+        G = np.block([
+            [np.eye(n)],
+            [-np.eye(n)]
+        ])
+        h = np.hstack([self.C * np.ones(n), np.zeros(n)])
+        b = 0.
+        A = y.reshape(1, -1,).astype('float64')
+
+        qp_args = [P, q, G, h, A, b]
+        qp_args = map(matrix, qp_args)
+        P, q, G, h, A, b = qp_args
+        res = solvers.qp(P=P, q=q, G=G, h=h, A=A, b=b)
+        self.alpha = np.array(res['x'])
+
+        self.w0 = 0
+        for i in range(n):
+            tmp = 0
+            for j in range(n):
+                tmp += self.alpha[j] * y[j] * self.kernel(X[i], X[j])
+            self.w0 += y[i] - tmp
+        self.w0 /= n
+
+        # just a filler
+        self.support = self.alpha > 100
+
+        self.X = X.copy()
+        self.y = y.copy()
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """
@@ -158,7 +197,10 @@ class KernelSVM:
             (т.е. то число, от которого берем знак с целью узнать класс).
 
         """
-        pass
+        res = np.zeros(X.shape[0]) + self.w0
+        for i in range(self.X.shape[0]):
+            res += self.alpha[i] * self.y[i] * self.kernel(X, self.X[i])
+        return res
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """

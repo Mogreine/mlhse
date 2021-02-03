@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification, make_moons, make_blobs
 from typing import NoReturn, Callable
 
-from src.hw7.hw7 import LinearSVM
+from src.hw7.hw7 import LinearSVM, KernelSVM, get_polynomial_kernel, get_gaussian_kernel
 
 solvers.options['show_progress'] = False
 
@@ -85,5 +85,31 @@ def test1():
     plt.show()
 
 
+def test2():
+    # X, y = generate_dataset(True)
+    # svm = KernelSVM(1, kernel=get_polynomial_kernel(1, 3))
+    # svm.fit(X, y)
+    # visualize(svm, X, y)
+    # plt.show()
+    #
+    # X, y = generate_dataset(False)
+    # svm = KernelSVM(1, kernel=get_polynomial_kernel(1, 3))
+    # svm.fit(X, y)
+    # visualize(svm, X, y)
+    # plt.show()
+
+    X, y = generate_dataset(True)
+    svm = KernelSVM(1, kernel=get_gaussian_kernel(0.4))
+    svm.fit(X, y)
+    visualize(svm, X, y)
+    plt.show()
+
+    X, y = generate_dataset(False)
+    svm = KernelSVM(1, kernel=get_gaussian_kernel(0.4))
+    svm.fit(X, y)
+    visualize(svm, X, y)
+    plt.show()
+
+
 if __name__ == "__main__":
-    test1()
+    test2()
