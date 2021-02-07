@@ -51,7 +51,7 @@ class LinearSVM:
         h = np.hstack([np.zeros(n), -np.ones(n)])
         G = np.block([
             [np.zeros((n, m)), np.zeros((n, 1)), -np.eye(n)],
-            [-y * X,         -y,             -np.eye(n)]
+            [-y * X,           -y,               -np.eye(n)]
         ])
         res = solvers.qp(matrix(P),
                          matrix(q),
