@@ -157,7 +157,7 @@ class KernelSVM:
             [np.eye(n)],
             [-np.eye(n)]
         ])
-        h = np.hstack([self.C * np.ones(n), np.zeros(n)])
+        h = np.vstack([self.C * np.ones((n, 1)), np.zeros((n, 1))]).astype('float64')
         b = 0.
         A = y.reshape(1, -1,).astype('float64')
 
@@ -165,7 +165,7 @@ class KernelSVM:
         qp_args = map(matrix, qp_args)
         P, q, G, h, A, b = qp_args
         res = solvers.qp(P=P, q=q, G=G, h=h, A=A, b=b)
-        self.alpha = np.array(res['x'])
+        self.alpha = np.array(res['x']).flatten()
 
         self.w0 = 0
         for i in range(n):
@@ -175,11 +175,15 @@ class KernelSVM:
             self.w0 += y[i] - tmp
         self.w0 /= n
 
+        # self.w = np.sum((self.alpha * y).reshape(-1, 1) * X, axis=0)
+
         # just a filler
-        self.support = self.alpha > 100
+        # self.support = y * self.decision_function(X) <= 1
 
         self.X = X.copy()
         self.y = y.copy()
+
+        self.support = y * self.decision_function(X) <= 1
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """

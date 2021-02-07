@@ -110,6 +110,12 @@ def test2():
     visualize(svm, X, y)
     plt.show()
 
+    X, y = generate_dataset(True)
+    svm = KernelSVM(1, kernel=get_polynomial_kernel(1, 3))
+    svm.fit(X, y)
+    visualize(svm, X, y)
+    plt.show()
+
 
 if __name__ == "__main__":
     test2()
