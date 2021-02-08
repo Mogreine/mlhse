@@ -168,11 +168,6 @@ class KernelSVM:
             self.w0 += y[i] - tmp
         self.w0 /= n
 
-        # self.w = np.sum((self.alpha * y).reshape(-1, 1) * X, axis=0)
-
-        # just a filler
-        # self.support = y * self.decision_function(X) <= 1
-
         self.X = X.copy()
         self.y = y.copy()
 
