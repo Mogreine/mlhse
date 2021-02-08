@@ -20,10 +20,6 @@ class LinearSVM:
         self.support = None
         self.x = np.ndarray
 
-    def find_support(self, X):
-        res = X @ self.w + self.w0
-        self.support = abs(abs(res) - 1) < 1e-8
-
     def fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
         Обучает SVM, решая задачу оптимизации при помощи cvxopt.solvers.qp
@@ -60,10 +56,7 @@ class LinearSVM:
         self.w = res['x'][:m]
         self.w0 = res['x'][m]
 
-        # support_ind = res['x'][m:] > 1e-6
-        # self.support = np.array(res['z'])[n:] > 1e-6
-
-        self.find_support(X)
+        self.support = y * self.decision_function(X) <= 1
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """
