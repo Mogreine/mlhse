@@ -12,7 +12,7 @@ def gini(x: np.ndarray) -> float:
     Считает коэффициент Джини для массива меток x.
     """
     values, counts = np.unique(x, return_counts=True)
-    counts /= len(x)
+    counts /= x.shape[0]
     return np.sum(counts * (1 - counts))
 
 
@@ -54,7 +54,6 @@ class DecisionTreeLeaf:
          соответствующиему метке.
     """
     def __init__(self, y_arr):
-        self.y = None
         values, counts = np.unique(y_arr, return_counts=True)
         counts /= len(y_arr)
         self.y = dict(zip(values, counts))
@@ -120,7 +119,7 @@ class DecisionTreeClassifier:
 
     def find_best_split(self, X: np.ndarray, y: np.ndarray):
         n, m = X.shape
-        split_gain, split_value, split_dim = -1, 0, 0
+        split_gain, split_value, split_dim = -1, -1, -1
         for col in range(m):
             vals = np.unique(X[:, col])
 
@@ -128,7 +127,7 @@ class DecisionTreeClassifier:
                 mask = X[:, col] < val
                 left = y[mask]
                 right = y[~mask]
-                if len(left) == 0 or len(right) == 0:
+                if len(left) < self.min_samples_leaf or len(right) < self.min_samples_leaf:
                     continue
                 g = gain(left, right, self.criterion)
                 if g > split_gain:
@@ -137,8 +136,24 @@ class DecisionTreeClassifier:
 
         return split_dim, split_value
 
-    def build_tree(self, node: DecisionTreeNode, X: np.ndarray, y: np.ndarray):
-        pass
+    def build_tree(self, X: np.ndarray, y: np.ndarray, depth):
+        if depth >= self.max_depth:
+            return DecisionTreeLeaf(y)
+
+        split_dim, split_value = self.find_best_split(X, y)
+        mask = X[:, split_dim] < split_value
+
+        left = self.build_tree(X[mask], y[mask], depth + 1)
+        right = self.build_tree(X[~mask], y[~mask], depth + 1)
+
+        node = DecisionTreeNode(
+            split_dim=split_dim,
+            split_value=split_value,
+            left=left,
+            right=right
+        )
+
+        return node
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
@@ -151,9 +166,17 @@ class DecisionTreeClassifier:
         y : np.ndarray
             Вектор меток классов.
         """
-        X_ = X.copy()
-        # X_ = np.sort(X_, axis=0)
+        self.root = self.build_tree(X, y, 0)
 
+    def walk_down(self, node: Union[DecisionTreeNode, DecisionTreeLeaf], x):
+        if node is DecisionTreeLeaf:
+            return node.y
+        split_value = node.split_value
+        split_dim = node.split_dim
+        if x[split_dim] < split_value:
+            return self.walk_down(node.left, x)
+        else:
+            return self.walk_down(node.right, x)
 
     def predict_proba(self, X: np.ndarray) -> List[Dict[Any, float]]:
         """
@@ -170,8 +193,8 @@ class DecisionTreeClassifier:
             Для каждого элемента из X возвращает словарь
             {метка класса -> вероятность класса}.
         """
-
-        raise NotImplementedError()
+        preds = [self.walk_down(self.root, x) for x in X]
+        return preds
 
     def predict(self, X: np.ndarray) -> list:
         """
