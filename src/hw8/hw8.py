@@ -12,7 +12,8 @@ def gini(x: np.ndarray) -> float:
     Считает коэффициент Джини для массива меток x.
     """
     values, counts = np.unique(x, return_counts=True)
-    counts /= x.shape[0]
+    counts = counts / x.shape[0]
+    # counts /= x.shape[0]
     return np.sum(counts * (1 - counts))
 
 
@@ -40,7 +41,7 @@ def gain(left_y: np.ndarray, right_y: np.ndarray, criterion: Callable) -> float:
     """
     k1 = len(left_y) / (len(left_y) + len(right_y))
     k2 = len(right_y) / (len(left_y) + len(right_y))
-    g = 1 - k1 * criterion(left_y) - k2 * criterion(right_y)
+    g = - k1 * criterion(left_y) - k2 * criterion(right_y)
     return g
 
 
@@ -55,8 +56,10 @@ class DecisionTreeLeaf:
     """
     def __init__(self, y_arr):
         values, counts = np.unique(y_arr, return_counts=True)
-        counts /= len(y_arr)
-        self.y = dict(zip(values, counts))
+        counts = counts / len(y_arr)
+        vc_zip = list(zip(values, counts))
+        self.preds = dict(vc_zip)
+        self.y = max(vc_zip, key=lambda x: x[1])[0]
 
 
 class DecisionTreeNode:
@@ -119,7 +122,7 @@ class DecisionTreeClassifier:
 
     def find_best_split(self, X: np.ndarray, y: np.ndarray):
         n, m = X.shape
-        split_gain, split_value, split_dim = -1, -1, -1
+        split_gain, split_value, split_dim = -100, -1, -1
         for col in range(m):
             vals = np.unique(X[:, col])
 
@@ -133,6 +136,7 @@ class DecisionTreeClassifier:
                 if g > split_gain:
                     split_value = val
                     split_dim = col
+                    split_gain = g
 
         return split_dim, split_value
 
@@ -141,6 +145,10 @@ class DecisionTreeClassifier:
             return DecisionTreeLeaf(y)
 
         split_dim, split_value = self.find_best_split(X, y)
+
+        if split_dim == -1:
+            return DecisionTreeLeaf(y)
+
         mask = X[:, split_dim] < split_value
 
         left = self.build_tree(X[mask], y[mask], depth + 1)
@@ -169,8 +177,8 @@ class DecisionTreeClassifier:
         self.root = self.build_tree(X, y, 0)
 
     def walk_down(self, node: Union[DecisionTreeNode, DecisionTreeLeaf], x):
-        if node is DecisionTreeLeaf:
-            return node.y
+        if type(node) is DecisionTreeLeaf:
+            return node.preds
         split_value = node.split_value
         split_dim = node.split_dim
         if x[split_dim] < split_value:
