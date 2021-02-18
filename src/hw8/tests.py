@@ -1,4 +1,6 @@
 from sklearn.datasets import make_blobs, make_moons
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas
 import random
@@ -117,5 +119,33 @@ def test2():
     draw_tree(tree)
 
 
+def read_dataset(path):
+    dataframe = pandas.read_csv(path, header=1)
+    dataset = dataframe.values.tolist()
+    # random.shuffle(dataset)
+    y = [row[0] for row in dataset]
+    X = [row[1:] for row in dataset]
+    return np.array(X), np.array(y)
+
+
+def test3():
+    X, y = read_dataset("train.csv")
+    dtc = DecisionTreeClassifier(
+        max_depth=6,
+        min_samples_leaf=5,
+        criterion='entropy'
+    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    dtc.fit(X_train, y_train)
+    preds = dtc.predict(X_test)
+    test_acc = accuracy_score(y_test, preds)
+    train_acc = accuracy_score(y_train, dtc.predict(X_train))
+    print(f'Accuracy test: {test_acc}')
+    print(f'Accuracy train: {train_acc}')
+
+    plot_2d(dtc, X, y)
+    draw_tree(dtc)
+
+
 if __name__ == "__main__":
-    test1()
+    test3()

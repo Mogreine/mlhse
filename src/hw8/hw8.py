@@ -13,7 +13,6 @@ def gini(x: np.ndarray) -> float:
     """
     values, counts = np.unique(x, return_counts=True)
     counts = counts / x.shape[0]
-    # counts /= x.shape[0]
     return np.sum(counts * (1 - counts))
 
 
@@ -22,7 +21,7 @@ def entropy(x: np.ndarray) -> float:
     Считает энтропию для массива меток x.
     """
     values, counts = np.unique(x, return_counts=True)
-    counts /= len(x)
+    counts = counts / len(x)
     return -np.sum(counts * np.log2(counts + 1e-16))
 
 
