@@ -106,6 +106,7 @@ class DecisionTreeClassifier:
         self.min_samples_leaf = min_samples_leaf
         self.max_features = max_features
         self.n_classes = None
+        self.oob_ids_mask = None
 
     def find_best_split(self, X: np.ndarray, y: np.ndarray, allowed_features: np.ndarray):
         n, m = X.shape
@@ -211,7 +212,6 @@ class DecisionTreeClassifier:
         proba = self.predict_proba(X)
         proba = np.argmax(proba, axis=1)
         return proba
-        # return [max(p.keys(), key=lambda k: p[k]) for p in proba]
 
 
 class RandomForestClassifier:
@@ -230,14 +230,21 @@ class RandomForestClassifier:
         ) for _ in range(self.n_estimators)]
         self.n_classes = None
         self.label_encoder = LabelEncoder()
+        self.out_bag_inds = np.ndarray
 
     def fit(self, X, y):
         n, m = X.shape
+
         self.n_classes = np.unique(y).shape[0]
         y = self.label_encoder.fit_transform(y)
-        for tree in self.trees:
+
+        for i in range(len(self.trees)):
+            out_bag_inds = np.zeros(n, dtype='bool')
             ids = np.random.randint(n, size=n)
-            tree.fit(X[ids], y[ids])
+            ids_uniq = np.unique(ids)
+            out_bag_inds[ids_uniq] = True
+            self.trees[i].oob_ids_mask = ~out_bag_inds
+            self.trees[i].fit(X[ids], y[ids])
 
     def predict(self, X):
         preds = np.zeros((X.shape[0], self.n_classes))
