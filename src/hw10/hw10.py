@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import copy
 import spacy
-# from nltk.stem.snowball import SnowballStemmer
+from nltk.stem.snowball import SnowballStemmer
 from typing import NoReturn
 import string
 
@@ -57,7 +57,6 @@ class NaiveBayes:
         list
             Предсказанный класс для каждого элемента из набора X.
         """
-        # return [self.classes[i] for i in np.argmax(self.log_proba(X), axis=1)]
         return self.enc.inverse_transform(np.argmax(self.log_proba(X), axis=1))
 
     def log_proba(self, X: np.ndarray) -> np.ndarray:
@@ -72,7 +71,6 @@ class NaiveBayes:
 
         X_ = np.minimum(X, self.bins - 1)
         for x in X_:
-            # x_ = np.minimum(x, self.bins - 1)
             fr = np.arange(len(x))
             r = self.probs[:, fr, x]
             r = np.sum(r, axis=1)
@@ -101,8 +99,68 @@ class BoW:
 
     def fit(self):
         wrds, counts = np.unique(
-            [wrd.translate(str.maketrans('', '', string.punctuation)) for sen in self.sentences for wrd in sen.split()],
+            [wrd.lower().translate(str.maketrans('', '', string.punctuation)) for sen in self.sentences for wrd in
+             sen.split()],
             return_counts=True)
+        arr = sorted(zip(counts[1:], wrds[1:]), reverse=True)
+        _, voc = zip(*arr)
+        self.voc_map = dict(zip(
+            voc[:self.voc_size],
+            range(self.voc_size))
+        )
+        self.voc = set(voc[:self.voc_size])
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        """
+        Векторизует предложения.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Массив строк (предложений) размерности (n_sentences, ),
+            который необходимо векторизовать.
+
+        Return
+        ------
+        np.ndarray
+            Матрица векторизованных предложений размерности (n_sentences, vocab_size)
+        """
+        res = np.zeros((X.shape[0], self.voc_size))
+
+        for sen, i in zip(X, range(X.shape[0])):
+            wrds, counts = np.unique([wrd.translate(str.maketrans('', '', string.punctuation)) for wrd in sen.split()],
+                                     return_counts=True)
+            for w, c in zip(wrds, counts):
+                if w in self.voc:
+                    res[i][self.voc_map[w]] = c
+
+        return res.astype(int)
+
+
+class BowStem:
+    def __init__(self, X: np.ndarray, voc_limit: int = 1000):
+        """
+        Составляет словарь, который будет использоваться для векторизации предложений.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Массив строк (предложений) размерности (n_sentences, ),
+            по которому будет составляться словарь.
+        voc_limit : int
+            Максимальное число слов в словаре.
+
+        """
+        self.sentences = X
+        self.voc_size = voc_limit
+        self.stemmer = SnowballStemmer('english')
+        self.fit()
+
+    def fit(self):
+        wrds = [wrd.lower().translate(str.maketrans('', '', string.punctuation)) for sen in self.sentences for wrd in
+                sen.split()]
+        wrds = [self.stemmer.stem(wrd) for wrd in wrds]
+        wrds, counts = np.unique(wrds, return_counts=True)
         arr = sorted(zip(counts[1:], wrds[1:]), reverse=True)
         _, voc = zip(*arr)
         self.voc_map = dict(zip(

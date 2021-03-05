@@ -84,10 +84,7 @@ def plot_precision_recall(X_train, y_train, X_test, y_test, bow_method, voc_size
     plot(voc_sizes, {"": accuracies}, "Accuracy", legend=False)
 
 
-if __name__ == '__main__':
-    X, y = read_dataset("spam")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9)
-
+def test1(X_train, X_test, y_train, y_test):
     bow = BoW(X_train, voc_limit=500)
     X_train_bow = bow.transform(X_train)
     X_test_bow = bow.transform(X_test)
@@ -97,3 +94,24 @@ if __name__ == '__main__':
     get_precision_recall_accuracy(predictor.predict(X_test_bow), y_test)
 
     plot_precision_recall(X_train, y_train, X_test, y_test, BoW)
+
+
+def test2(X_train, X_test, y_train, y_test):
+    bows = BowStem(X_train, voc_limit=500)
+    X_train_bows = bows.transform(X_train)
+    X_test_bows = bows.transform(X_test)
+
+    predictor = NaiveBayes(0.001)
+    predictor.fit(X_train_bows, y_train)
+    get_precision_recall_accuracy(predictor.predict(X_test_bows), y_test)
+
+    plot_precision_recall(X_train, y_train, X_test, y_test, BowStem)
+
+
+if __name__ == '__main__':
+    X, y = read_dataset("spam")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9)
+
+    # test1(X_train, X_test, y_train, y_test)
+    test2(X_train, X_test, y_train, y_test)
+
