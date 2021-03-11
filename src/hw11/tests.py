@@ -92,4 +92,7 @@ def synthetic_points(count=25, dims=2):
 if __name__ == "__main__":
     X = synthetic_points()
     hc = HillClimb(100, l1_distance)
-    print(cyclic_distance(X[hc.optimize(X)], hc.dist))
+    HTML(visualize_hillclimb(X, hc).to_jshtml())
+
+    gen = Genetic(200, 100, 20, l1_distance)
+    HTML(visualize_genetic(X, gen).to_jshtml())

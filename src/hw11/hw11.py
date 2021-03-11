@@ -1,5 +1,7 @@
 import numpy as np
 
+from typing import List
+
 
 def cyclic_distance(points, dist):
     res = 0
@@ -11,12 +13,12 @@ def cyclic_distance(points, dist):
 
 
 def l2_distance(p1, p2):
-    return np.sum(np.abs(p1 - p2))
+    d = p1 - p2
+    return np.sqrt(d @ d)
 
 
 def l1_distance(p1, p2):
-    d = p1 - p2
-    return np.sqrt(d @ d)
+    return np.sum(np.abs(p1 - p2))
 
 
 class HillClimb:
@@ -59,6 +61,7 @@ class HillClimb:
         res = []
         for i in range(len(points) - 1):
             res.append(dist(points[i], points[i + 1]))
+        res += dist(points[0], points[-1])
 
         return res, np.sum(res)
 
@@ -106,8 +109,47 @@ class Genetic:
         self.dist = distance
         self.iters = iterations
 
-    def optimize(self, X):
-        pass
+    def optimize(self, X) -> np.ndarray:
+        population = self.optimize_explain(X)
+        return self.fitness(X, population)[0]
 
-    def optimize_explain(self, X):
-        pass
+    def optimize_explain(self, X) -> np.ndarray:
+        n = X.shape[0]
+        population = np.array([np.random.permutation(n) for _ in range(self.pop_size)]).astype(int)
+        res = [population]
+
+        for _ in range(self.iters):
+            pop_inds_sorted = self.fitness(X, population)
+
+            # take the best
+            pop_inds_survived = pop_inds_sorted[:self.surv_size]
+
+            # generate new population
+            population = self.crossover(population[pop_inds_survived])
+
+            res.append(population)
+
+        return res
+
+    def fitness(self, X: np.ndarray, population: np.ndarray) -> np.ndarray:
+        return np.argsort([cyclic_distance(X[perm], self.dist) for perm in population])
+
+    def crossover(self, population: List[np.ndarray]) -> np.ndarray:
+        n = len(population)
+        res = []
+
+        for _ in range(self.pop_size):
+            inds = np.random.choice(n, 2, replace=True)
+            res.append(self.breed(*population[inds]))
+
+        return np.array(res, dtype=int)
+
+    def breed(self, perm1, perm2) -> np.ndarray:
+        n = len(perm1)
+        copy_inds = np.sort(np.random.choice(n, 2, replace=True))
+
+        part1 = perm1[copy_inds[0]:copy_inds[1] + 1]
+        part2 = [ind for ind in perm2 if ind not in part1]
+
+        res = np.concatenate([part1, part2])
+        return res
