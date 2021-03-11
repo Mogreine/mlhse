@@ -5,6 +5,7 @@ def cyclic_distance(points, dist):
     res = 0
     for i in range(len(points) - 1):
         res += dist(points[i], points[i + 1])
+    res += dist(points[0], points[-1])
 
     return res
 
@@ -96,3 +97,17 @@ class HillClimb:
                     best_dist_arr = new_dist_arr.copy()
 
         return best_pair, best_loss, best_dist_arr
+
+
+class Genetic:
+    def __init__(self, iterations, population, survivors, distance):
+        self.pop_size = population
+        self.surv_size = survivors
+        self.dist = distance
+        self.iters = iterations
+
+    def optimize(self, X):
+        pass
+
+    def optimize_explain(self, X):
+        pass
